@@ -10,7 +10,6 @@ if getattr(sys, 'frozen', False): # PyInstaller adds this attribute
 else:
     # Running in normal Python environment
     CurrentPath = ""                    #Copypasted from stackoverflow, not sure how it works or what it does, but it's there
-sprite_path = os.path.join(CurrentPath, "assets")
 pygame.init()
 RED = [255, 0, 0]
 BLUE = [0, 0, 255]
@@ -20,23 +19,22 @@ WHITE = [255, 255, 255]
 clock = pygame.time.Clock()
 screen_width = 800
 screen_length = 600
-health = 5
 score = 0
+instance_score = 0
+items = 0
 
-icon = pygame.image.load(os.path.join(sprite_path, "icon.png"))
-font = pygame.font.Font(os.path.join(sprite_path, "coolfont.ttf"), 24) #Font, duh
+font = pygame.font.Font(os.path.join("assets", "coolfont.ttf"), 24) #Font, duh
 
-screen = pygame.display.set_mode((screen_width, screen_length)) #Setting the game window and other cool stuff, using variables rather than hardcoded numbers makes me feel like a programmer
+screen = pygame.display.set_mode((screen_width, screen_length)) #Setting the game window
 pygame.display.set_caption("Dodging game 3000")
-pygame.display.set_icon(icon)
 
-running = True #Enabling the game loop
 clock = pygame.time.Clock()
+menu_png = pygame.image.load(os.path.join("assets", "menu_screen.png")).convert_alpha()
 
 class Projectile(pygame.sprite.Sprite): #Things that get shot at you
     def __init__(self):
         super().__init__()
-        self.image = pygame.image.load(os.path.join(sprite_path, "aurinko.jpg")).convert_alpha() #Placeholder image for the projectiles I had laying around
+        self.image = pygame.image.load(os.path.join("assets", "aurinko.jpg")).convert_alpha() #Placeholder image for the projectiles I had laying around
         self.image = pygame.transform.scale(self.image, (32, 32))
         self.set_colorkey = WHITE
         self.rect = self.image.get_rect()
@@ -44,11 +42,13 @@ class Projectile(pygame.sprite.Sprite): #Things that get shot at you
         
     def update(self): #Handles movement and stuff
         global score
+        global instance_score
         if self.rect.x < 0: #If they go off the screen, put them back so it seems like more projectiles are spawning
             self.rect.x = screen_width + 64
             self.rect.y = random.randrange(0, screen_length)
+            instance_score += 1
             score += 1
-        self.rect.x -= self.x_speed + score * 0.05 #speed * score enables for the enemies to speed up when you get more points, making for EXCITING gameplay
+        self.rect.x -= self.x_speed + instance_score * 0.05 #speed * score enables for the enemies to speed up when you get more points, making for EXCITING gameplay
     
     def reset_pos(self):
         self.rect.x = screen_width + 64
@@ -57,7 +57,7 @@ class Projectile(pygame.sprite.Sprite): #Things that get shot at you
 class Player(pygame.sprite.Sprite): #Player class, filled with all the good stuff
     def __init__(self):
         super().__init__()
-        self.image = pygame.image.load(os.path.join(sprite_path, "player.png")).convert_alpha()
+        self.image = pygame.image.load(os.path.join("assets", "player.png")).convert_alpha()
         self.image = pygame.transform.scale(self.image, (64, 64))
         self.set_colorkey = BLACK
         self.rect = self.image.get_rect()
@@ -89,33 +89,93 @@ for i in range(8): #There are just 8 projectiles, they're just recycled constant
     enemy_list.add(enemy) #Add them to the spritegroups for ezpz collision detection
     all_sprites.add(enemy)
 
-while running: #Gamelööp
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                running = False
-        elif event.type == pygame.QUIT:
-            running = False
+def menu():
+    intro = True
+    while intro:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                elif event.key == pygame.K_SPACE:
+                    intro = False
+                    main_game()
+                elif event.key == pygame.K_c:
+                    intro = False
+                    store()
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+        screen.fill(BLUE)
+        menu_text = font.render("Total points: " + str(score), True, BLACK)
+        screen.blit(menu_png, [0, 0])
+        screen.blit(menu_text, [0, 0])
 
-    collision_list = pygame.sprite.spritecollide(player, enemy_list, False) #Checks for collisions
-
-    for enemy in collision_list:
-        health -= 1
-        enemy.reset_pos() #If projectile hits player, put them to the right side of the screen
-
-    if health <= 0: #Out of health? No more game for you. Unless you launch it again
-        running = False
-
-    screen.fill(BLUE)
-    all_sprites.update() #Updates all the positions
-
-    all_sprites.draw(screen) #Draws all the sprites
-    score_text = font.render("Points: " + str(score), True, BLACK) #All the text on the screen
-    health_text = font.render("Health: " + str(health), True, BLACK)
-    screen.blit(score_text, [0, 0])
-    screen.blit(health_text, [0, 25])
-
-    pygame.display.flip() 
-    clock.tick(60) #FPS
+        pygame.display.flip()
+        clock.tick(1)
             
-pygame.quit()
+def store():
+    shop = True
+    while shop:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                elif event.key == pygame.K_SPACE:
+                    shop = False
+                    main_game()
+                elif event.key == pygame.K_c:
+                    shop = False
+                    menu()
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+        screen.fill(BLUE)
+        
+        menu_text = font.render("Total points: " + str(score), True, BLACK)
+        menu2 = font.render("Press the corresponding number to buy an upgrade", True, BLACK)
+        menu3 = font.render("1. Health upgrade", True, BLACK)
+        menu4 = font.render("2. Health upgrade 2", True, BLACK)
+
+        #If x purchased then blit text?
+        screen.blit(menu_text, [0, 0])
+        screen.blit(menu2, [10, 50])
+        screen.blit(menu3, [50, 100])
+        screen.blit(menu4, [50, 200])
+
+        pygame.display.flip()
+        clock.tick(1)
+
+def main_game():
+    running = True
+    health = 5 + items
+    global instance_score
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+
+        collision_list = pygame.sprite.spritecollide(player, enemy_list, False) #Checks for collisions
+
+        for enemy in collision_list:
+            health -= 1
+            enemy.reset_pos() #If projectile hits player, put them to the right side of the screen
+
+        if health <= 0: #Out of health? No more game for you. Unless you launch it again
+            instance_score = 0
+            running = False
+            menu()
+
+        screen.fill(BLUE)
+        all_sprites.update() #Updates all the positions
+
+        all_sprites.draw(screen) #Draws all the sprites
+        score_text = font.render("Points: " + str(instance_score), True, BLACK) #All the text on the screen
+        health_text = font.render("Health: " + str(health), True, BLACK)
+        screen.blit(score_text, [0, 0])
+        screen.blit(health_text, [0, 25])
+
+        pygame.display.flip() 
+        clock.tick(60) #FPS
+
+menu()
